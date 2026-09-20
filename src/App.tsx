@@ -69,6 +69,7 @@ export default function App() {
       {view !== 'preview' && <section className="pane editor-pane"><div className="pane-heading"><span>MARKDOWN</span><span className="pane-meta">{source.length} 文字</span></div><CodeMirror value={source} height="100%" extensions={[markdown()]} onChange={setSource} basicSetup={{ lineNumbers: true, foldGutter: true, highlightActiveLine: true }} /></section>}
       {view !== 'edit' && <section className="pane preview-pane"><div className="pane-heading"><span>PREVIEW</span><span className="live-indicator"><i/> LIVE</span></div><article className="markdown-body" dangerouslySetInnerHTML={{ __html: safeHtml }} /></section>}
     </section>
+    <article className="markdown-body print-only" aria-hidden="true" dangerouslySetInnerHTML={{ __html: safeHtml }} />
     <footer className="statusbar"><span><i className="status-dot"/> {saved ? '自動保存済み（このブラウザ）' : '保存中…'}</span><span>Markdown · HTML · PDF via Print</span></footer>
   </main>;
 }
