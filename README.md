@@ -9,17 +9,24 @@ Ediput is designed to run as a static web app, with GitHub Pages as the initial 
 - Markdown editing with CodeMirror 6
 - Live Markdown preview
 - Edit / split / preview view controls
-- Export rendered content as a standalone HTML file
+- Debounced localStorage autosave and restore in the same browser
+- Export sanitized rendered content as a standalone HTML file
+- Print dialog workflow for saving the preview as PDF
+- Reset to the starter document (confirmation required)
 - Responsive graphite interface with restrained cyan/teal accents
+- DOMPurify sanitization of rendered Markdown before HTML injection/export
+
+**PDF note:** PDF is currently produced through the browser's print dialog, not a dedicated PDF-generation engine. Choose “Save as PDF” in the print destination. Page size, margins, and pagination can vary by browser.
 
 ## Planned capabilities
 
-- PDF export with page-size, margin, and page-break controls
+- Dedicated PDF export controls (page size, margins, page breaks)
 - Image export (PNG, JPEG, WebP, SVG where technically appropriate)
 - DOCX export
-- Markdown features including tables, math, syntax highlighting, and diagrams
-- Local document persistence and import/export
-- Mobile-friendly editing and preview
+- Markdown features including math, syntax highlighting, and diagrams
+- Markdown file import/export
+- Multiple named documents
+- Mobile-friendly editing and preview refinements
 
 Planned items are not implemented unless explicitly listed under Current prototype.
 
@@ -27,9 +34,10 @@ Planned items are not implemented unless explicitly listed under Current prototy
 
 - React + TypeScript + Vite for a static, browser-based application
 - CodeMirror 6 for editing
-- `marked` for initial Markdown rendering
-- A shared document/rendering layer should become the source for preview and export, avoiding separate inconsistent renderers
+- `marked` for Markdown rendering
+- DOMPurify to sanitize rendered HTML before insertion
 - Browser-side processing by default; no server dependency for core editing
+- `localStorage` is browser-local and is not a cloud sync or backup system
 - Tauri 2 may be evaluated for a future desktop wrapper, without making it a requirement for the web app
 
 ## Development
