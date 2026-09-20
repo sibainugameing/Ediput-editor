@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import CodeMirror from '@uiw/react-codemirror';
 import { markdown } from '@codemirror/lang-markdown';
+import DOMPurify from 'dompurify';
 import { marked } from 'marked';
 import { Download, FileText, Eye, Pencil, Columns2, Printer, RotateCcw } from 'lucide-react';
 
 const STORAGE_KEY = 'ediput.document.v1';
-const starter = `# Ediput\n\nMarkdownを編集して、右側でプレビューできます。\n\n## できること\n\n- Markdownの即時プレビュー\n- ブラウザ内での自動保存\n- HTMLとして保存\n- 印刷ダイアログからPDFとして保存\n\n## PDF出力\n\n「PDF / 印刷」を押し、印刷先で「PDFに保存」を選択してください。\n\n> PDF生成はブラウザの印刷機能を利用します。\n\n\`\`\`ts\nconst editor = "ready";\n\`\`\``;
+const starter = `# Ediput\n\nMarkdownを編集して、右側でプレビューできます。\n\n## できること\n\n- Markdownの即時プレビュー\n- ブラウザ内の自動保存\n- HTMLとして保存\n- 印刷ダイアログからPDFとして保存\n\n## PDF出力\n\n「PDF / 印刷」を押し、印刷先で「PDFに保存」を選択してください。\n\n> PDF生成はブラウザの印刷機能を利用します。\n\n\`\`\`ts\nconst editor = "ready";\n\`\`\``;
 
 type ViewMode = 'split' | 'edit' | 'preview';
 
@@ -19,6 +20,10 @@ function downloadText(filename: string, content: string, type: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+function makeDocumentHtml(content: string) {
+  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ediput document</title><style>body{font:16px/1.75 system-ui,-apple-system,sans-serif;max-width:800px;margin:48px auto;padding:0 24px;color:#20242b}img{max-width:100%;height:auto}pre{overflow:auto;background:#f2f4f7;padding:16px;border-radius:8px;white-space:pre-wrap}blockquote{border-left:3px solid #8a96a8;padding-left:16px;color:#596273}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccd2da;padding:6px 10px;text-align:left}a{color:#267c83}@media print{@page{size:A4;margin:18mm}body{max-width:none;margin:0;padding:0}h1,h2,h3{break-after:avoid}pre,blockquote,table,img{break-inside:avoid}pre{white-space:pre-wrap;overflow-wrap:anywhere}}</style></head><body>${content}</body></html>`;
+}
+
 export default function App() {
   const [source, setSource] = useState(() => {
     try { return localStorage.getItem(STORAGE_KEY) ?? starter; }
@@ -26,7 +31,8 @@ export default function App() {
   });
   const [view, setView] = useState<ViewMode>('split');
   const [saved, setSaved] = useState(true);
-  const html = useMemo(() => marked.parse(source, { async: false }) as string, [source]);
+  const rawHtml = useMemo(() => marked.parse(source, { async: false }) as string, [source]);
+  const safeHtml = useMemo(() => DOMPurify.sanitize(rawHtml), [rawHtml]);
 
   useEffect(() => {
     setSaved(false);
@@ -38,8 +44,7 @@ export default function App() {
   }, [source]);
 
   function exportHtml() {
-    const documentHtml = `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ediput document</title><style>body{font:16px/1.75 system-ui,sans-serif;max-width:800px;margin:48px auto;padding:0 24px;color:#20242b}pre{overflow:auto;background:#f2f4f7;padding:16px;border-radius:8px}blockquote{border-left:3px solid #8a96a8;padding-left:16px;color:#596273}img{max-width:100%}table{border-collapse:collapse}th,td{border:1px solid #ccd2da;padding:6px 10px}</style></head><body>${html}</body></html>`;
-    downloadText('ediput-document.html', documentHtml, 'text/html;charset=utf-8');
+    downloadText('ediput-document.html', makeDocumentHtml(safeHtml), 'text/html;charset=utf-8');
   }
 
   function resetDocument() {
@@ -62,7 +67,7 @@ export default function App() {
     </header>
     <section className={`workspace mode-${view}`}>
       {view !== 'preview' && <section className="pane editor-pane"><div className="pane-heading"><span>MARKDOWN</span><span className="pane-meta">{source.length} 文字</span></div><CodeMirror value={source} height="100%" extensions={[markdown()]} onChange={setSource} basicSetup={{ lineNumbers: true, foldGutter: true, highlightActiveLine: true }} /></section>}
-      {view !== 'edit' && <section className="pane preview-pane"><div className="pane-heading"><span>PREVIEW</span><span className="live-indicator"><i/> LIVE</span></div><article className="markdown-body" dangerouslySetInnerHTML={{ __html: html }} /></section>}
+      {view !== 'edit' && <section className="pane preview-pane"><div className="pane-heading"><span>PREVIEW</span><span className="live-indicator"><i/> LIVE</span></div><article className="markdown-body" dangerouslySetInnerHTML={{ __html: safeHtml }} /></section>}
     </section>
     <footer className="statusbar"><span><i className="status-dot"/> {saved ? '自動保存済み（このブラウザ）' : '保存中…'}</span><span>Markdown · HTML · PDF via Print</span></footer>
   </main>;
