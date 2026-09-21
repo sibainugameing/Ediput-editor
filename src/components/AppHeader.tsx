@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent, type RefObject } from 'react';
+import { useEffect, useState, type ChangeEvent, type RefObject } from 'react';
 import {
   Columns2,
   Download,
@@ -38,6 +38,23 @@ export function AppHeader({
 }: AppHeaderProps) {
   const [fileMenuOpen, setFileMenuOpen] = useState(false);
 
+  useEffect(() => {
+    if (!fileMenuOpen) return;
+
+    const closeOnEscape = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') {
+        setFileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', closeOnEscape);
+    return () => document.removeEventListener('keydown', closeOnEscape);
+  }, [fileMenuOpen]);
+
+  useEffect(() => {
+    setFileMenuOpen(false);
+  }, [view]);
+
   function runFileAction(action: () => void): void {
     setFileMenuOpen(false);
     action();
@@ -45,8 +62,13 @@ export function AppHeader({
 
   return (
     <header className={'topbar view-' + view}>
-      <a className="brand" href="#" aria-label="Ediput home">
-        <span className="brand-mark">
+      <a
+        className="brand"
+        href="#"
+        aria-label="Ediput home"
+        onClick={(event) => event.preventDefault()}
+      >
+        <span className="brand-mark" aria-hidden="true">
           <FileText size={19} />
         </span>
         <span>Ediput</span>
@@ -54,32 +76,35 @@ export function AppHeader({
       </a>
 
       <div className="top-actions">
-        <div className="view-switch" aria-label="表示モード">
+        <div className="view-switch" aria-label="表示モード" role="group">
           <button
             className={view === 'edit' ? 'active' : ''}
             onClick={() => onViewChange('edit')}
             title="編集"
+            aria-pressed={view === 'edit'}
             type="button"
           >
-            <Pencil size={16} />
+            <Pencil size={16} aria-hidden="true" />
             <span>編集</span>
           </button>
           <button
             className={view === 'split' ? 'active' : ''}
             onClick={() => onViewChange('split')}
             title="分割"
+            aria-pressed={view === 'split'}
             type="button"
           >
-            <Columns2 size={16} />
+            <Columns2 size={16} aria-hidden="true" />
             <span>分割</span>
           </button>
           <button
             className={view === 'preview' ? 'active' : ''}
             onClick={() => onViewChange('preview')}
             title="プレビュー"
+            aria-pressed={view === 'preview'}
             type="button"
           >
-            <Eye size={16} />
+            <Eye size={16} aria-hidden="true" />
             <span>表示</span>
           </button>
         </div>
@@ -99,7 +124,7 @@ export function AppHeader({
             title="Markdownファイルを読み込む"
             type="button"
           >
-            <FileUp size={15} />
+            <FileUp size={15} aria-hidden="true" />
             <span>読み込み</span>
           </button>
           <button
@@ -108,7 +133,7 @@ export function AppHeader({
             title="Markdownファイルとして保存"
             type="button"
           >
-            <Save size={15} />
+            <Save size={15} aria-hidden="true" />
             <span>保存</span>
           </button>
           <button
@@ -117,7 +142,7 @@ export function AppHeader({
             title="サンプルに戻す"
             type="button"
           >
-            <RotateCcw size={15} />
+            <RotateCcw size={15} aria-hidden="true" />
             <span>リセット</span>
           </button>
           <button
@@ -126,7 +151,7 @@ export function AppHeader({
             title="PDFとして保存または印刷"
             type="button"
           >
-            <Printer size={16} />
+            <Printer size={16} aria-hidden="true" />
             <span>PDF / 印刷</span>
           </button>
           <button
@@ -135,7 +160,7 @@ export function AppHeader({
             title="HTMLファイルとして保存"
             type="button"
           >
-            <Download size={16} />
+            <Download size={16} aria-hidden="true" />
             <span>HTML保存</span>
           </button>
         </div>
@@ -145,36 +170,55 @@ export function AppHeader({
             className="mobile-file-button"
             onClick={() => setFileMenuOpen((open) => !open)}
             aria-expanded={fileMenuOpen}
+            aria-haspopup="menu"
             aria-controls="mobile-file-actions"
+            title="ファイル操作"
             type="button"
           >
-            {fileMenuOpen ? <X size={18} /> : <FolderOpen size={18} />}
+            {fileMenuOpen ? <X size={18} aria-hidden="true" /> : <FolderOpen size={18} aria-hidden="true" />}
             <span>ファイル</span>
           </button>
 
           {fileMenuOpen && (
-            <div id="mobile-file-actions" className="mobile-file-panel">
+            <div id="mobile-file-actions" className="mobile-file-panel" role="menu">
               <button
                 onClick={() => runFileAction(() => fileInputRef.current?.click())}
+                role="menuitem"
                 type="button"
               >
-                <FileUp size={18} />
+                <FileUp size={18} aria-hidden="true" />
                 <span>Markdownを開く</span>
               </button>
-              <button onClick={() => runFileAction(onExportMarkdown)} type="button">
-                <Save size={18} />
+              <button
+                onClick={() => runFileAction(onExportMarkdown)}
+                role="menuitem"
+                type="button"
+              >
+                <Save size={18} aria-hidden="true" />
                 <span>Markdownを保存</span>
               </button>
-              <button onClick={() => runFileAction(onExportHtml)} type="button">
-                <Download size={18} />
+              <button
+                onClick={() => runFileAction(onExportHtml)}
+                role="menuitem"
+                type="button"
+              >
+                <Download size={18} aria-hidden="true" />
                 <span>HTMLを保存</span>
               </button>
-              <button onClick={() => runFileAction(onPrint)} type="button">
-                <Printer size={18} />
+              <button
+                onClick={() => runFileAction(onPrint)}
+                role="menuitem"
+                type="button"
+              >
+                <Printer size={18} aria-hidden="true" />
                 <span>PDF / 印刷</span>
               </button>
-              <button onClick={() => runFileAction(onReset)} type="button">
-                <RotateCcw size={18} />
+              <button
+                onClick={() => runFileAction(onReset)}
+                role="menuitem"
+                type="button"
+              >
+                <RotateCcw size={18} aria-hidden="true" />
                 <span>サンプルに戻す</span>
               </button>
             </div>
