@@ -13,6 +13,7 @@
     "@codemirror/theme-one-dark": "^6.1.2",
     "@uiw/react-codemirror": "^4.23.10",
     "dompurify": "^3.2.4",
+    "katex": "^0.16.22",
     "lucide-react": "^0.468.0",
     "marked": "^15.0.7",
     "react": "^19.0.0",
