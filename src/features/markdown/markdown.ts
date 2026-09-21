@@ -5,27 +5,29 @@ export const STORAGE_KEY = 'ediput.document.v1';
 export const DOCUMENT_NAME_STORAGE_KEY = 'ediput.document-name.v1';
 export const DEFAULT_DOCUMENT_NAME = 'ediput-document.md';
 
-export const STARTER_MARKDOWN = `# Ediput
-
-Markdownを編集して、右側でプレビューできます。
-
-## できること
-
-- Markdownの即時プレビュー
-- ブラウザ内の自動保存
-- Markdown / HTMLとして保存
-- Markdownファイルの読み込み
-- 印刷ダイアログからPDFとして保存
-
-## PDF出力
-
-「PDF / 印刷」を押し、印刷先で「PDFに保存」を選択してください。
-
-> PDF生成はブラウザの印刷機能を利用します。
-
-```ts
-const editor = "ready";
-```;
+export const STARTER_MARKDOWN = [
+  '# Ediput',
+  '',
+  'Markdownを編集して、右側でプレビューできます。',
+  '',
+  '## できること',
+  '',
+  '- Markdownの即時プレビュー',
+  '- ブラウザ内の自動保存',
+  '- Markdown / HTMLとして保存',
+  '- Markdownファイルの読み込み',
+  '- 印刷ダイアログからPDFとして保存',
+  '',
+  '## PDF出力',
+  '',
+  '「PDF / 印刷」を押し、印刷先で「PDFに保存」を選択してください。',
+  '',
+  '> PDF生成はブラウザの印刷機能を利用します。',
+  '',
+  '```ts',
+  'const editor = "ready";',
+  '```',
+].join('\n');
 
 export function renderMarkdown(source: string): string {
   return marked.parse(source, { async: false }) as string;
