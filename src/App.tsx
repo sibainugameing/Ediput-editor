@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import CodeMirror from '@uiw/react-codemirror';
 import { markdown } from '@codemirror/lang-markdown';
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
-import { Download, FileText, Eye, Pencil, Columns2, Printer, RotateCcw } from 'lucide-react';
+import { Download, FileText, Eye, Pencil, Columns2, Printer, RotateCcw, FileUp } from 'lucide-react';
 
 const STORAGE_KEY = 'ediput.document.v1';
-const starter = `# Ediput\n\nMarkdownを編集して、右側でプレビューできます。\n\n## できること\n\n- Markdownの即時プレビュー\n- ブラウザ内の自動保存\n- HTMLとして保存\n- 印刷ダイアログからPDFとして保存\n\n## PDF出力\n\n「PDF / 印刷」を押し、印刷先で「PDFに保存」を選択してください。\n\n> PDF生成はブラウザの印刷機能を利用します。\n\n\`\`\`ts\nconst editor = "ready";\n\`\`\``;
+const starter = `# Ediput\n\nMarkdownを編集して、右側でプレビューできます。\n\n## できること\n\n- Markdownの即時プレビュー\n- ブラウザ内の自動保存\n- Markdown / HTMLとして保存\n- Markdownファイルの読み込み\n- 印刷ダイアログからPDFとして保存\n\n## PDF出力\n\n「PDF / 印刷」を押し、印刷先で「PDFに保存」を選択してください。\n\n> PDF生成はブラウザの印刷機能を利用します。\n\n\`\`\`ts\nconst editor = "ready";\n\`\`\``;
 
 type ViewMode = 'split' | 'edit' | 'preview';
 
@@ -31,6 +31,7 @@ export default function App() {
   });
   const [view, setView] = useState<ViewMode>('split');
   const [saved, setSaved] = useState(true);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const rawHtml = useMemo(() => marked.parse(source, { async: false }) as string, [source]);
   const safeHtml = useMemo(() => DOMPurify.sanitize(rawHtml), [rawHtml]);
 
@@ -47,6 +48,26 @@ export default function App() {
     downloadText('ediput-document.html', makeDocumentHtml(safeHtml), 'text/html;charset=utf-8');
   }
 
+  function exportMarkdown() {
+    downloadText('ediput-document.md', source, 'text/markdown;charset=utf-8');
+  }
+
+  async function importMarkdown(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!window.confirm(`「${file.name}」を読み込みます。現在の文章を置き換えますか？`)) {
+      event.target.value = '';
+      return;
+    }
+    try {
+      setSource(await file.text());
+    } catch {
+      window.alert('ファイルを読み込めませんでした。');
+    } finally {
+      event.target.value = '';
+    }
+  }
+
   function resetDocument() {
     if (window.confirm('現在の文章を初期サンプルに戻しますか？')) setSource(starter);
   }
@@ -60,6 +81,9 @@ export default function App() {
           <button className={view === 'split' ? 'active' : ''} onClick={() => setView('split')} title="分割"><Columns2 size={16}/><span>分割</span></button>
           <button className={view === 'preview' ? 'active' : ''} onClick={() => setView('preview')} title="プレビュー"><Eye size={16}/><span>表示</span></button>
         </div>
+        <input ref={fileInputRef} type="file" accept=".md,.markdown,.txt,text/markdown,text/plain" onChange={importMarkdown} hidden />
+        <button className="secondary-button" onClick={() => fileInputRef.current?.click()} title="Markdownファイルを読み込む"><FileUp size={15}/><span>読み込み</span></button>
+        <button className="secondary-button" onClick={exportMarkdown} title="Markdownファイルとして保存"><Download size={15}/><span>MD</span></button>
         <button className="secondary-button" onClick={resetDocument} title="サンプルに戻す"><RotateCcw size={15}/><span>リセット</span></button>
         <button className="secondary-button" onClick={() => window.print()}><Printer size={16}/><span>PDF / 印刷</span></button>
         <button className="export-button" onClick={exportHtml}><Download size={16}/><span>HTML</span></button>
