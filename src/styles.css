@@ -337,6 +337,22 @@ button {
   color: #267c83;
 }
 
+.math-inline {
+  white-space: nowrap;
+}
+
+.math-display {
+  display: block;
+  margin: 1em 0;
+  text-align: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.katex {
+  font-size: 1.05em;
+}
+
 .markdown-body blockquote {
   border-left: 3px solid #8fb9ba;
   margin: 1.4em 0;
@@ -711,6 +727,15 @@ button {
   .print-only img {
     max-width: 100%;
     break-inside: avoid;
+  }
+
+  .print-only .math-display {
+    break-inside: avoid;
+    overflow: visible;
+  }
+
+  .print-only .math-inline {
+    white-space: nowrap;
   }
 
   a {
