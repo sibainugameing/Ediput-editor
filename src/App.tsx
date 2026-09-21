@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { AppHeader, type ViewMode } from './components/AppHeader';
 import { EditorPane } from './components/EditorPane';
 import { PreviewPane } from './components/PreviewPane';
@@ -14,12 +14,15 @@ import {
 import { loadStoredDocument, useAutosave } from './hooks/useAutosave';
 import { useScrollSync } from './hooks/useScrollSync';
 
+const MOBILE_BREAKPOINT = '(max-width: 700px)';
+const KEYBOARD_THRESHOLD = 150;
+
 export default function App() {
   const [source, setSource] = useState(() =>
     loadStoredDocument(STORAGE_KEY, STARTER_MARKDOWN),
   );
   const [view, setView] = useState<ViewMode>(() =>
-    window.matchMedia('(max-width: 700px)').matches ? 'edit' : 'split',
+    window.matchMedia(MOBILE_BREAKPOINT).matches ? 'edit' : 'split',
   );
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -29,6 +32,31 @@ export default function App() {
   const rawHtml = useMemo(() => renderMarkdown(source), [source]);
   const safeHtml = useMemo(() => sanitizeHtml(rawHtml), [rawHtml]);
   const saved = useAutosave(source, STORAGE_KEY);
+
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+
+    const updateKeyboardState = (): void => {
+      const keyboardHeight = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
+      const keyboardOpen =
+        view === 'edit' &&
+        window.matchMedia(MOBILE_BREAKPOINT).matches &&
+        keyboardHeight > KEYBOARD_THRESHOLD;
+
+      document.documentElement.classList.toggle('keyboard-open', keyboardOpen);
+    };
+
+    updateKeyboardState();
+    viewport.addEventListener('resize', updateKeyboardState);
+    viewport.addEventListener('scroll', updateKeyboardState);
+
+    return () => {
+      viewport.removeEventListener('resize', updateKeyboardState);
+      viewport.removeEventListener('scroll', updateKeyboardState);
+      document.documentElement.classList.remove('keyboard-open');
+    };
+  }, [view]);
 
   useScrollSync({
     enabled: view === 'split',
