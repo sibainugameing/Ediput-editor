@@ -32,6 +32,9 @@ export default function App() {
   const [view, setView] = useState<ViewMode>('split');
   const [saved, setSaved] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const editorPaneRef = useRef<HTMLElement>(null);
+  const previewPaneRef = useRef<HTMLElement>(null);
+  const syncingScrollRef = useRef(false);
   const rawHtml = useMemo(() => marked.parse(source, { async: false }) as string, [source]);
   const safeHtml = useMemo(() => DOMPurify.sanitize(rawHtml), [rawHtml]);
 
@@ -43,6 +46,44 @@ export default function App() {
     }, 300);
     return () => window.clearTimeout(timer);
   }, [source]);
+
+  useEffect(() => {
+    if (view !== 'split') return;
+
+    const editorScroller = editorPaneRef.current?.querySelector<HTMLElement>('.cm-scroller');
+    const previewScroller = previewPaneRef.current?.querySelector<HTMLElement>('.markdown-body');
+    if (!editorScroller || !previewScroller) return;
+
+    let animationFrame = 0;
+    const syncScroll = (from: HTMLElement, to: HTMLElement) => {
+      if (syncingScrollRef.current) return;
+      const fromMax = Math.max(0, from.scrollHeight - from.clientHeight);
+      const toMax = Math.max(0, to.scrollHeight - to.clientHeight);
+      if (fromMax === 0 || toMax === 0) return;
+      const ratio = from.scrollTop / fromMax;
+      const targetTop = ratio * toMax;
+      if (Math.abs(to.scrollTop - targetTop) < 1) return;
+
+      syncingScrollRef.current = true;
+      to.scrollTop = targetTop;
+      window.cancelAnimationFrame(animationFrame);
+      animationFrame = window.requestAnimationFrame(() => {
+        syncingScrollRef.current = false;
+      });
+    };
+
+    const onEditorScroll = () => syncScroll(editorScroller, previewScroller);
+    const onPreviewScroll = () => syncScroll(previewScroller, editorScroller);
+    editorScroller.addEventListener('scroll', onEditorScroll, { passive: true });
+    previewScroller.addEventListener('scroll', onPreviewScroll, { passive: true });
+
+    return () => {
+      editorScroller.removeEventListener('scroll', onEditorScroll);
+      previewScroller.removeEventListener('scroll', onPreviewScroll);
+      window.cancelAnimationFrame(animationFrame);
+      syncingScrollRef.current = false;
+    };
+  }, [view, safeHtml]);
 
   function exportHtml() {
     downloadText('ediput-document.html', makeDocumentHtml(safeHtml), 'text/html;charset=utf-8');
@@ -90,8 +131,8 @@ export default function App() {
       </div>
     </header>
     <section className={`workspace mode-${view}`}>
-      {view !== 'preview' && <section className="pane editor-pane"><div className="pane-heading"><span>MARKDOWN</span><span className="pane-meta">{source.length} 文字</span></div><CodeMirror value={source} height="100%" extensions={[markdown()]} onChange={setSource} basicSetup={{ lineNumbers: true, foldGutter: true, highlightActiveLine: true }} /></section>}
-      {view !== 'edit' && <section className="pane preview-pane"><div className="pane-heading"><span>PREVIEW</span><span className="live-indicator"><i/> LIVE</span></div><article className="markdown-body" dangerouslySetInnerHTML={{ __html: safeHtml }} /></section>}
+      {view !== 'preview' && <section ref={editorPaneRef} className="pane editor-pane"><div className="pane-heading"><span>MARKDOWN</span><span className="pane-meta">{source.length} 文字</span></div><CodeMirror value={source} height="100%" extensions={[markdown()]} onChange={setSource} basicSetup={{ lineNumbers: true, foldGutter: true, highlightActiveLine: true }} /></section>}
+      {view !== 'edit' && <section ref={previewPaneRef} className="pane preview-pane"><div className="pane-heading"><span>PREVIEW</span><span className="live-indicator"><i/> LIVE</span></div><article className="markdown-body" dangerouslySetInnerHTML={{ __html: safeHtml }} /></section>}
     </section>
     <article className="markdown-body print-only" aria-hidden="true" dangerouslySetInnerHTML={{ __html: safeHtml }} />
     <footer className="statusbar"><span><i className="status-dot"/> {saved ? '自動保存済み（このブラウザ）' : '保存中…'}</span><span>Markdown · HTML · PDF via Print</span></footer>
