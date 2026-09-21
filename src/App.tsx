@@ -1,105 +1,65 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import CodeMirror from '@uiw/react-codemirror';
-import { markdown } from '@codemirror/lang-markdown';
-import DOMPurify from 'dompurify';
-import { marked } from 'marked';
-import { Download, FileText, Eye, Pencil, Columns2, Printer, RotateCcw, FileUp } from 'lucide-react';
-
-const STORAGE_KEY = 'ediput.document.v1';
-const starter = `# Ediput\n\nMarkdownを編集して、右側でプレビューできます。\n\n## できること\n\n- Markdownの即時プレビュー\n- ブラウザ内の自動保存\n- Markdown / HTMLとして保存\n- Markdownファイルの読み込み\n- 印刷ダイアログからPDFとして保存\n\n## PDF出力\n\n「PDF / 印刷」を押し、印刷先で「PDFに保存」を選択してください。\n\n> PDF生成はブラウザの印刷機能を利用します。\n\n\`\`\`ts\nconst editor = "ready";\n\`\`\``;
-
-type ViewMode = 'split' | 'edit' | 'preview';
-
-function downloadText(filename: string, content: string, type: string) {
-  const blob = new Blob([content], { type });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement('a');
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.click();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
-function makeDocumentHtml(content: string) {
-  return `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Ediput document</title><style>body{font:16px/1.75 system-ui,-apple-system,sans-serif;max-width:800px;margin:48px auto;padding:0 24px;color:#20242b}img{max-width:100%;height:auto}pre{overflow:auto;background:#f2f4f7;padding:16px;border-radius:8px;white-space:pre-wrap}blockquote{border-left:3px solid #8a96a8;padding-left:16px;color:#596273}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ccd2da;padding:6px 10px;text-align:left}a{color:#267c83}@media print{@page{size:A4;margin:18mm}body{max-width:none;margin:0;padding:0}h1,h2,h3{break-after:avoid}pre,blockquote,table,img{break-inside:avoid}pre{white-space:pre-wrap;overflow-wrap:anywhere}}</style></head><body>${content}</body></html>`;
-}
+import { useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { AppHeader, type ViewMode } from './components/AppHeader';
+import { EditorPane } from './components/EditorPane';
+import { PreviewPane } from './components/PreviewPane';
+import { StatusBar } from './components/StatusBar';
+import {
+  downloadText,
+  makeDocumentHtml,
+  renderMarkdown,
+  sanitizeHtml,
+  STARTER_MARKDOWN,
+  STORAGE_KEY,
+} from './features/markdown/markdown';
+import { loadStoredDocument, useAutosave } from './hooks/useAutosave';
+import { useScrollSync } from './hooks/useScrollSync';
 
 export default function App() {
-  const [source, setSource] = useState(() => {
-    try { return localStorage.getItem(STORAGE_KEY) ?? starter; }
-    catch { return starter; }
-  });
+  const [source, setSource] = useState(() =>
+    loadStoredDocument(STORAGE_KEY, STARTER_MARKDOWN),
+  );
   const [view, setView] = useState<ViewMode>('split');
-  const [saved, setSaved] = useState(true);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorPaneRef = useRef<HTMLElement>(null);
   const previewPaneRef = useRef<HTMLElement>(null);
-  const syncingScrollRef = useRef(false);
-  const rawHtml = useMemo(() => marked.parse(source, { async: false }) as string, [source]);
-  const safeHtml = useMemo(() => DOMPurify.sanitize(rawHtml), [rawHtml]);
 
-  useEffect(() => {
-    setSaved(false);
-    const timer = window.setTimeout(() => {
-      try { localStorage.setItem(STORAGE_KEY, source); setSaved(true); }
-      catch { setSaved(false); }
-    }, 300);
-    return () => window.clearTimeout(timer);
-  }, [source]);
+  const rawHtml = useMemo(() => renderMarkdown(source), [source]);
+  const safeHtml = useMemo(() => sanitizeHtml(rawHtml), [rawHtml]);
+  const saved = useAutosave(source, STORAGE_KEY);
 
-  useEffect(() => {
-    if (view !== 'split') return;
+  useScrollSync({
+    enabled: view === 'split',
+    editorPaneRef,
+    previewPaneRef,
+    contentKey: safeHtml,
+  });
 
-    const editorScroller = editorPaneRef.current?.querySelector<HTMLElement>('.cm-scroller');
-    const previewScroller = previewPaneRef.current?.querySelector<HTMLElement>('.markdown-body');
-    if (!editorScroller || !previewScroller) return;
-
-    let animationFrame = 0;
-    const syncScroll = (from: HTMLElement, to: HTMLElement) => {
-      if (syncingScrollRef.current) return;
-      const fromMax = Math.max(0, from.scrollHeight - from.clientHeight);
-      const toMax = Math.max(0, to.scrollHeight - to.clientHeight);
-      if (fromMax === 0 || toMax === 0) return;
-      const ratio = from.scrollTop / fromMax;
-      const targetTop = ratio * toMax;
-      if (Math.abs(to.scrollTop - targetTop) < 1) return;
-
-      syncingScrollRef.current = true;
-      to.scrollTop = targetTop;
-      window.cancelAnimationFrame(animationFrame);
-      animationFrame = window.requestAnimationFrame(() => {
-        syncingScrollRef.current = false;
-      });
-    };
-
-    const onEditorScroll = () => syncScroll(editorScroller, previewScroller);
-    const onPreviewScroll = () => syncScroll(previewScroller, editorScroller);
-    editorScroller.addEventListener('scroll', onEditorScroll, { passive: true });
-    previewScroller.addEventListener('scroll', onPreviewScroll, { passive: true });
-
-    return () => {
-      editorScroller.removeEventListener('scroll', onEditorScroll);
-      previewScroller.removeEventListener('scroll', onPreviewScroll);
-      window.cancelAnimationFrame(animationFrame);
-      syncingScrollRef.current = false;
-    };
-  }, [view, safeHtml]);
-
-  function exportHtml() {
-    downloadText('ediput-document.html', makeDocumentHtml(safeHtml), 'text/html;charset=utf-8');
+  function exportHtml(): void {
+    downloadText(
+      'ediput-document.html',
+      makeDocumentHtml(safeHtml),
+      'text/html;charset=utf-8',
+    );
   }
 
-  function exportMarkdown() {
-    downloadText('ediput-document.md', source, 'text/markdown;charset=utf-8');
+  function exportMarkdown(): void {
+    downloadText(
+      'ediput-document.md',
+      source,
+      'text/markdown;charset=utf-8',
+    );
   }
 
-  async function importMarkdown(event: React.ChangeEvent<HTMLInputElement>) {
+  async function importMarkdown(event: ChangeEvent<HTMLInputElement>): Promise<void> {
     const file = event.target.files?.[0];
     if (!file) return;
+
     if (!window.confirm(`「${file.name}」を読み込みます。現在の文章を置き換えますか？`)) {
       event.target.value = '';
       return;
     }
+
     try {
       setSource(await file.text());
     } catch {
@@ -109,32 +69,49 @@ export default function App() {
     }
   }
 
-  function resetDocument() {
-    if (window.confirm('現在の文章を初期サンプルに戻しますか？')) setSource(starter);
+  function resetDocument(): void {
+    if (window.confirm('現在の文章を初期サンプルに戻しますか？')) {
+      setSource(STARTER_MARKDOWN);
+    }
   }
 
-  return <main className="app-shell">
-    <header className="topbar">
-      <a className="brand" href="#" aria-label="Ediput home"><span className="brand-mark"><FileText size={19}/></span><span>Ediput</span><span className="version">Preview</span></a>
-      <div className="top-actions">
-        <div className="view-switch" aria-label="表示モード">
-          <button className={view === 'edit' ? 'active' : ''} onClick={() => setView('edit')} title="編集"><Pencil size={16}/><span>編集</span></button>
-          <button className={view === 'split' ? 'active' : ''} onClick={() => setView('split')} title="分割"><Columns2 size={16}/><span>分割</span></button>
-          <button className={view === 'preview' ? 'active' : ''} onClick={() => setView('preview')} title="プレビュー"><Eye size={16}/><span>表示</span></button>
-        </div>
-        <input ref={fileInputRef} type="file" accept=".md,.markdown,.txt,text/markdown,text/plain" onChange={importMarkdown} hidden />
-        <button className="secondary-button" onClick={() => fileInputRef.current?.click()} title="Markdownファイルを読み込む"><FileUp size={15}/><span>読み込み</span></button>
-        <button className="secondary-button" onClick={exportMarkdown} title="Markdownファイルとして保存"><Download size={15}/><span>MD</span></button>
-        <button className="secondary-button" onClick={resetDocument} title="サンプルに戻す"><RotateCcw size={15}/><span>リセット</span></button>
-        <button className="secondary-button" onClick={() => window.print()}><Printer size={16}/><span>PDF / 印刷</span></button>
-        <button className="export-button" onClick={exportHtml}><Download size={16}/><span>HTML</span></button>
-      </div>
-    </header>
-    <section className={`workspace mode-${view}`}>
-      {view !== 'preview' && <section ref={editorPaneRef} className="pane editor-pane"><div className="pane-heading"><span>MARKDOWN</span><span className="pane-meta">{source.length} 文字</span></div><CodeMirror value={source} height="100%" extensions={[markdown()]} onChange={setSource} basicSetup={{ lineNumbers: true, foldGutter: true, highlightActiveLine: true }} /></section>}
-      {view !== 'edit' && <section ref={previewPaneRef} className="pane preview-pane"><div className="pane-heading"><span>PREVIEW</span><span className="live-indicator"><i/> LIVE</span></div><article className="markdown-body" dangerouslySetInnerHTML={{ __html: safeHtml }} /></section>}
-    </section>
-    <article className="markdown-body print-only" aria-hidden="true" dangerouslySetInnerHTML={{ __html: safeHtml }} />
-    <footer className="statusbar"><span><i className="status-dot"/> {saved ? '自動保存済み（このブラウザ）' : '保存中…'}</span><span>Markdown · HTML · PDF via Print</span></footer>
-  </main>;
+  return (
+    <main className="app-shell">
+      <AppHeader
+        view={view}
+        onViewChange={setView}
+        fileInputRef={fileInputRef}
+        onImport={importMarkdown}
+        onExportMarkdown={exportMarkdown}
+        onReset={resetDocument}
+        onPrint={() => window.print()}
+        onExportHtml={exportHtml}
+      />
+
+      <section className={`workspace mode-${view}`}>
+        {view !== 'preview' && (
+          <EditorPane
+            source={source}
+            editorPaneRef={editorPaneRef}
+            onChange={setSource}
+          />
+        )}
+
+        {view !== 'edit' && (
+          <PreviewPane
+            safeHtml={safeHtml}
+            previewPaneRef={previewPaneRef}
+          />
+        )}
+      </section>
+
+      <article
+        className="markdown-body print-only"
+        aria-hidden="true"
+        dangerouslySetInnerHTML={{ __html: safeHtml }}
+      />
+
+      <StatusBar saved={saved} />
+    </main>
+  );
 }
