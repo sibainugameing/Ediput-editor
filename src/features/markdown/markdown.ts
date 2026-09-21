@@ -42,10 +42,56 @@ export const STARTER_MARKDOWN = [
   '~~~',
 ].join('\n');
 
-const MATH_PATTERN = /\\\[([\s\S]*?)\\\]|\\\(([\s\S]*?)\\\)/g;
+type MathExpression = {
+  source: string;
+  expression: string;
+  displayMode: boolean;
+};
 
-function renderMathInHtml(html: string): string {
-  if (typeof document === 'undefined') {
+const MATH_PATTERN = /\\\[([\s\S]*?)\\\]|\\\(([\s\S]*?)\\\)/g;
+const MATH_TOKEN_PATTERN = /\uE000ediput-math-(\d+)\uE001/g;
+
+function protectMath(source: string): {
+  source: string;
+  expressions: MathExpression[];
+} {
+  const expressions: MathExpression[] = [];
+
+  const maskedSource = source.replace(
+    MATH_PATTERN,
+    (
+      match: string,
+      displayExpression: string | undefined,
+      inlineExpression: string | undefined,
+    ) => {
+      const expression = (
+        displayExpression ??
+        inlineExpression ??
+        ''
+      ).trim();
+      const displayMode = displayExpression !== undefined;
+      const index =
+        expressions.push({
+          source: match,
+          expression,
+          displayMode,
+        }) - 1;
+
+      return '\uE000ediput-math-' + index + '\uE001';
+    },
+  );
+
+  return {
+    source: maskedSource,
+    expressions,
+  };
+}
+
+function renderMathInHtml(
+  html: string,
+  expressions: MathExpression[],
+): string {
+  if (typeof document === 'undefined' || expressions.length === 0) {
     return html;
   }
 
@@ -59,58 +105,62 @@ function renderMathInHtml(html: string): string {
   const textNodes: Text[] = [];
 
   while (walker.nextNode()) {
-    const node = walker.currentNode as Text;
-    if (!node.parentElement?.closest('code, pre, script, style')) {
-      textNodes.push(node);
-    }
+    textNodes.push(walker.currentNode as Text);
   }
 
   for (const textNode of textNodes) {
     const value = textNode.nodeValue ?? '';
-    MATH_PATTERN.lastIndex = 0;
+    MATH_TOKEN_PATTERN.lastIndex = 0;
 
-    if (!MATH_PATTERN.test(value)) {
+    if (!MATH_TOKEN_PATTERN.test(value)) {
       continue;
     }
 
-    MATH_PATTERN.lastIndex = 0;
+    MATH_TOKEN_PATTERN.lastIndex = 0;
     const fragment = document.createDocumentFragment();
     let cursor = 0;
 
     value.replace(
-      MATH_PATTERN,
-      (
-        match,
-        displayExpression: string | undefined,
-        inlineExpression: string | undefined,
-        offset: number,
-      ) => {
+      MATH_TOKEN_PATTERN,
+      (match: string, indexText: string, offset: number) => {
+        const index = Number(indexText);
+        const item = expressions[index];
+
+        if (!item) {
+          return match;
+        }
+
         if (offset > cursor) {
           fragment.appendChild(
             document.createTextNode(value.slice(cursor, offset)),
           );
         }
 
-        const expression = (
-          displayExpression ??
-          inlineExpression ??
-          ''
-        ).trim();
-        const displayMode = displayExpression !== undefined;
-        const wrapper = document.createElement('span');
-        wrapper.className = displayMode ? 'math-display' : 'math-inline';
+        const insideCode = Boolean(
+          textNode.parentElement?.closest('code, pre, script, style'),
+        );
 
-        try {
-          wrapper.innerHTML = katex.renderToString(expression, {
-            displayMode,
-            throwOnError: false,
-            strict: 'ignore',
-          });
-        } catch {
-          wrapper.textContent = match;
+        if (insideCode) {
+          fragment.appendChild(document.createTextNode(item.source));
+        } else {
+          const wrapper = document.createElement('span');
+          wrapper.className = item.displayMode
+            ? 'math-display'
+            : 'math-inline';
+
+          try {
+            wrapper.innerHTML = katex.renderToString(item.expression, {
+              displayMode: item.displayMode,
+              throwOnError: false,
+              strict: 'ignore',
+            });
+          } catch {
+            wrapper.textContent = item.source;
+          }
+
+          fragment.appendChild(wrapper);
         }
 
-        fragment.appendChild(wrapper);
         cursor = offset + match.length;
         return match;
       },
@@ -129,8 +179,12 @@ function renderMathInHtml(html: string): string {
 }
 
 export function renderMarkdown(source: string): string {
-  const html = marked.parse(source, { async: false }) as string;
-  return renderMathInHtml(html);
+  const protectedSource = protectMath(source);
+  const html = marked.parse(protectedSource.source, {
+    async: false,
+  }) as string;
+
+  return renderMathInHtml(html, protectedSource.expressions);
 }
 
 export function sanitizeHtml(html: string): string {
