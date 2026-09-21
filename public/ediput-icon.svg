@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Ediput</title>
+  <desc id="desc">Ediput Markdown editor app icon</desc>
+
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#252a31"/>
+      <stop offset="100%" stop-color="#17191d"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#a6d9dc"/>
+      <stop offset="100%" stop-color="#5fb9ba"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="36" y="36" width="952" height="952" rx="228" fill="url(#tile)"/>
+  <rect x="50" y="50" width="924" height="924" rx="214"
+        fill="none" stroke="#3b414b" stroke-width="20"/>
+
+  <path
+    d="M285 168h330l124 124v564c0 38-31 69-69 69H285c-38 0-69-31-69-69V237c0-38 31-69 69-69Z"
+    fill="url(#paper)"
+  />
+
+  <path
+    d="M615 168v103c0 38 31 69 69 69h55"
+    fill="#7ecacd"
+  />
+
+  <path
+    d="M350 379h300"
+    stroke="#182326"
+    stroke-width="62"
+    stroke-linecap="round"
+  />
+
+  <path
+    d="M350 512h225"
+    stroke="#182326"
+    stroke-width="62"
+    stroke-linecap="round"
+  />
+
+  <path
+    d="M350 645h300"
+    stroke="#182326"
+    stroke-width="62"
+    stroke-linecap="round"
+  />
+
+  <path
+    d="M708 668 806 766 728 844 630 746Z"
+    fill="#eef7f7"
+  />
+  <path
+    d="m708 668 43-43 98 98-43 43Z"
+    fill="#82cfd0"
+  />
+  <path
+    d="m626 746-20 91 91-20Z"
+    fill="#d5eeee"
+  />
+</svg>
