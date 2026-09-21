@@ -25,7 +25,7 @@ Markdownを編集して、右側でプレビューできます。
 
 ```ts
 const editor = "ready";
-````;
+```;
 
 export function renderMarkdown(source: string): string {
   return marked.parse(source, { async: false }) as string;
@@ -55,14 +55,14 @@ export function downloadText(
 
 export function markdownFilenameFromImport(name: string): string {
   const leafName = name.replace(/^.*[\\/]/, '').trim();
-  const stem = leafName.replace(/\\.(?:md|markdown|txt)$/i, '').trim();
+  const stem = leafName.replace(/\.(?:md|markdown|txt)$/i, '').trim();
 
   return `${stem || 'ediput-document'}.md`;
 }
 
 export function htmlFilenameFromMarkdown(name: string): string {
   const leafName = name.replace(/^.*[\\/]/, '').trim();
-  const stem = leafName.replace(/\\.(?:md|markdown|txt|html)$/i, '').trim();
+  const stem = leafName.replace(/\.(?:md|markdown|txt|html)$/i, '').trim();
 
   return `${stem || 'ediput-document'}.html`;
 }
