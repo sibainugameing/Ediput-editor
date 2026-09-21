@@ -10,6 +10,8 @@ Ediput is designed to run as a static web app, with GitHub Pages as the initial 
 - Live Markdown preview
 - Edit / split / preview view controls
 - Debounced localStorage autosave and restore in the same browser
+- Import Markdown (`.md`, `.markdown`) and plain-text (`.txt`) files, replacing the current document after confirmation
+- Export the current source as a `.md` file
 - Export sanitized rendered content as a standalone HTML file
 - Print dialog workflow for saving the preview as PDF
 - Reset to the starter document (confirmation required)
@@ -24,7 +26,6 @@ Ediput is designed to run as a static web app, with GitHub Pages as the initial 
 - Image export (PNG, JPEG, WebP, SVG where technically appropriate)
 - DOCX export
 - Markdown features including math, syntax highlighting, and diagrams
-- Markdown file import/export
 - Multiple named documents
 - Mobile-friendly editing and preview refinements
 
