@@ -2,6 +2,8 @@ import DOMPurify from 'dompurify';
 import { marked } from 'marked';
 
 export const STORAGE_KEY = 'ediput.document.v1';
+export const DOCUMENT_NAME_STORAGE_KEY = 'ediput.document-name.v1';
+export const DEFAULT_DOCUMENT_NAME = 'ediput-document.md';
 
 export const STARTER_MARKDOWN = `# Ediput
 
@@ -21,9 +23,9 @@ Markdownを編集して、右側でプレビューできます。
 
 > PDF生成はブラウザの印刷機能を利用します。
 
-\`\`\`ts
+```ts
 const editor = "ready";
-\`\`\``;
+````;
 
 export function renderMarkdown(source: string): string {
   return marked.parse(source, { async: false }) as string;
@@ -33,7 +35,11 @@ export function sanitizeHtml(html: string): string {
   return DOMPurify.sanitize(html);
 }
 
-export function downloadText(filename: string, content: string, type: string): void {
+export function downloadText(
+  filename: string,
+  content: string,
+  type: string,
+): void {
   const blob = new Blob([content], { type });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
@@ -45,6 +51,20 @@ export function downloadText(filename: string, content: string, type: string): v
   anchor.remove();
 
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+export function markdownFilenameFromImport(name: string): string {
+  const leafName = name.replace(/^.*[\\/]/, '').trim();
+  const stem = leafName.replace(/\\.(?:md|markdown|txt)$/i, '').trim();
+
+  return `${stem || 'ediput-document'}.md`;
+}
+
+export function htmlFilenameFromMarkdown(name: string): string {
+  const leafName = name.replace(/^.*[\\/]/, '').trim();
+  const stem = leafName.replace(/\\.(?:md|markdown|txt|html)$/i, '').trim();
+
+  return `${stem || 'ediput-document'}.html`;
 }
 
 export function makeDocumentHtml(content: string): string {
