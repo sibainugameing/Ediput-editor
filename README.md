@@ -17,8 +17,40 @@ Ediput is designed to run as a static web app, with GitHub Pages as the initial 
 - Reset to the starter document (confirmation required)
 - Responsive graphite interface with restrained cyan/teal accents
 - DOMPurify sanitization of rendered Markdown before HTML injection/export
+- Bidirectional proportional scroll synchronization between the editor and preview in split view
 
 **PDF note:** PDF is currently produced through the browser's print dialog, not a dedicated PDF-generation engine. Choose “Save as PDF” in the print destination. Page size, margins, and pagination can vary by browser.
+
+## Architecture
+
+The application is intentionally split so the editor shell stays small and feature logic can evolve independently:
+
+```text
+src/
+├── App.tsx
+├── main.tsx
+├── styles.css
+├── components/
+│   ├── AppHeader.tsx
+│   ├── EditorPane.tsx
+│   ├── PreviewPane.tsx
+│   └── StatusBar.tsx
+├── features/
+│   └── markdown/
+│       └── markdown.ts
+└── hooks/
+    ├── useAutosave.ts
+    └── useScrollSync.ts
+```
+
+Responsibilities are separated as follows:
+
+- `App.tsx`: application state and composition
+- `components/`: presentational UI and editor/preview panes
+- `features/markdown/`: Markdown rendering, sanitization, downloads, starter content, and document HTML generation
+- `hooks/`: browser persistence and split-view behavior
+
+The CSS remains centralized in `src/styles.css` because the current UI uses one shared visual system across all panes and responsive states.
 
 ## Planned capabilities
 
