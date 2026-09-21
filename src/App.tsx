@@ -53,7 +53,7 @@ export default function App() {
       // Filename persistence is best-effort, just like document autosave.
     }
 
-    document.title = documentName.replace(/\\.(?:md|markdown|txt)$/i, '') || 'Ediput';
+    document.title = documentName.replace(/\.(?:md|markdown|txt)$/i, '') || 'Ediput';
 
     return () => {
       document.title = 'Ediput';
