@@ -18,7 +18,9 @@ export default function App() {
   const [source, setSource] = useState(() =>
     loadStoredDocument(STORAGE_KEY, STARTER_MARKDOWN),
   );
-  const [view, setView] = useState<ViewMode>('split');
+  const [view, setView] = useState<ViewMode>(() =>
+    window.matchMedia('(max-width: 700px)').matches ? 'edit' : 'split',
+  );
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorPaneRef = useRef<HTMLElement>(null);
@@ -88,7 +90,7 @@ export default function App() {
         onExportHtml={exportHtml}
       />
 
-      <section className={`workspace mode-${view}`}>
+      <section className={'workspace mode-' + view}>
         {view !== 'preview' && (
           <EditorPane
             source={source}
