@@ -1,4 +1,4 @@
-import { useEffect, useState, type ChangeEvent, type RefObject } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type RefObject } from 'react';
 import {
   Columns2,
   Download,
@@ -18,6 +18,7 @@ export type ViewMode = 'split' | 'edit' | 'preview';
 type AppHeaderProps = {
   view: ViewMode;
   onViewChange: (view: ViewMode) => void;
+  documentName: string;
   fileInputRef: RefObject<HTMLInputElement | null>;
   onImport: (event: ChangeEvent<HTMLInputElement>) => void;
   onExportMarkdown: () => void;
@@ -29,6 +30,7 @@ type AppHeaderProps = {
 export function AppHeader({
   view,
   onViewChange,
+  documentName,
   fileInputRef,
   onImport,
   onExportMarkdown,
@@ -37,6 +39,7 @@ export function AppHeader({
   onExportHtml,
 }: AppHeaderProps) {
   const [fileMenuOpen, setFileMenuOpen] = useState(false);
+  const fileMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!fileMenuOpen) return;
@@ -47,8 +50,20 @@ export function AppHeader({
       }
     };
 
+    const closeOnOutsidePointer = (event: PointerEvent): void => {
+      const target = event.target;
+      if (target instanceof Node && !fileMenuRef.current?.contains(target)) {
+        setFileMenuOpen(false);
+      }
+    };
+
     document.addEventListener('keydown', closeOnEscape);
-    return () => document.removeEventListener('keydown', closeOnEscape);
+    document.addEventListener('pointerdown', closeOnOutsidePointer);
+
+    return () => {
+      document.removeEventListener('keydown', closeOnEscape);
+      document.removeEventListener('pointerdown', closeOnOutsidePointer);
+    };
   }, [fileMenuOpen]);
 
   useEffect(() => {
@@ -71,8 +86,14 @@ export function AppHeader({
         <span className="brand-mark" aria-hidden="true">
           <FileText size={19} />
         </span>
-        <span>Ediput</span>
+
+        <span className="brand-label">Ediput</span>
+
         <span className="version">Preview</span>
+
+        <span className="document-name" title={documentName}>
+          {documentName}
+        </span>
       </a>
 
       <div className="top-actions">
@@ -87,6 +108,7 @@ export function AppHeader({
             <Pencil size={16} aria-hidden="true" />
             <span>編集</span>
           </button>
+
           <button
             className={view === 'split' ? 'active' : ''}
             onClick={() => onViewChange('split')}
@@ -97,6 +119,7 @@ export function AppHeader({
             <Columns2 size={16} aria-hidden="true" />
             <span>分割</span>
           </button>
+
           <button
             className={view === 'preview' ? 'active' : ''}
             onClick={() => onViewChange('preview')}
@@ -127,6 +150,7 @@ export function AppHeader({
             <FileUp size={15} aria-hidden="true" />
             <span>読み込み</span>
           </button>
+
           <button
             className="secondary-button"
             onClick={onExportMarkdown}
@@ -136,6 +160,7 @@ export function AppHeader({
             <Save size={15} aria-hidden="true" />
             <span>保存</span>
           </button>
+
           <button
             className="secondary-button"
             onClick={onReset}
@@ -145,6 +170,7 @@ export function AppHeader({
             <RotateCcw size={15} aria-hidden="true" />
             <span>リセット</span>
           </button>
+
           <button
             className="secondary-button"
             onClick={onPrint}
@@ -154,6 +180,7 @@ export function AppHeader({
             <Printer size={16} aria-hidden="true" />
             <span>PDF / 印刷</span>
           </button>
+
           <button
             className="export-button"
             onClick={onExportHtml}
@@ -165,7 +192,7 @@ export function AppHeader({
           </button>
         </div>
 
-        <div className="mobile-file-menu">
+        <div className="mobile-file-menu" ref={fileMenuRef}>
           <button
             className="mobile-file-button"
             onClick={() => setFileMenuOpen((open) => !open)}
@@ -175,20 +202,33 @@ export function AppHeader({
             title="ファイル操作"
             type="button"
           >
-            {fileMenuOpen ? <X size={18} aria-hidden="true" /> : <FolderOpen size={18} aria-hidden="true" />}
+            {fileMenuOpen ? (
+              <X size={18} aria-hidden="true" />
+            ) : (
+              <FolderOpen size={18} aria-hidden="true" />
+            )}
+
             <span>ファイル</span>
           </button>
 
           {fileMenuOpen && (
-            <div id="mobile-file-actions" className="mobile-file-panel" role="menu">
+            <div
+              id="mobile-file-actions"
+              className="mobile-file-panel"
+              role="menu"
+              aria-label="ファイル操作"
+            >
               <button
-                onClick={() => runFileAction(() => fileInputRef.current?.click())}
+                onClick={() =>
+                  runFileAction(() => fileInputRef.current?.click())
+                }
                 role="menuitem"
                 type="button"
               >
                 <FileUp size={18} aria-hidden="true" />
                 <span>Markdownを開く</span>
               </button>
+
               <button
                 onClick={() => runFileAction(onExportMarkdown)}
                 role="menuitem"
@@ -197,6 +237,7 @@ export function AppHeader({
                 <Save size={18} aria-hidden="true" />
                 <span>Markdownを保存</span>
               </button>
+
               <button
                 onClick={() => runFileAction(onExportHtml)}
                 role="menuitem"
@@ -205,6 +246,7 @@ export function AppHeader({
                 <Download size={18} aria-hidden="true" />
                 <span>HTMLを保存</span>
               </button>
+
               <button
                 onClick={() => runFileAction(onPrint)}
                 role="menuitem"
@@ -213,6 +255,7 @@ export function AppHeader({
                 <Printer size={18} aria-hidden="true" />
                 <span>PDF / 印刷</span>
               </button>
+
               <button
                 onClick={() => runFileAction(onReset)}
                 role="menuitem"
