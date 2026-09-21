@@ -48,8 +48,32 @@ type MathExpression = {
   displayMode: boolean;
 };
 
-const MATH_PATTERN = /\\\[([\s\S]*?)\\\]|\\\(([\s\S]*?)\\\)/g;
 const MATH_TOKEN_PATTERN = /\uE000ediput-math-(\d+)\uE001/g;
+
+function isEscaped(source: string, index: number): boolean {
+  let slashCount = 0;
+
+  for (let cursor = index - 1; cursor >= 0 && source[cursor] === '\\'; cursor -= 1) {
+    slashCount += 1;
+  }
+
+  return slashCount % 2 === 1;
+}
+
+function addMathExpression(
+  expressions: MathExpression[],
+  source: string,
+  expression: string,
+  displayMode: boolean,
+): string {
+  const index = expressions.push({
+    source,
+    expression: expression.trim(),
+    displayMode,
+  }) - 1;
+
+  return '\uE000ediput-math-' + index + '\uE001';
+}
 
 function protectMath(source: string): {
   source: string;
@@ -57,29 +81,68 @@ function protectMath(source: string): {
 } {
   const expressions: MathExpression[] = [];
 
-  const maskedSource = source.replace(
-    MATH_PATTERN,
-    (
-      match: string,
-      displayExpression: string | undefined,
-      inlineExpression: string | undefined,
-    ) => {
-      const expression = (
-        displayExpression ??
-        inlineExpression ??
-        ''
-      ).trim();
-      const displayMode = displayExpression !== undefined;
-      const index =
-        expressions.push({
-          source: match,
-          expression,
-          displayMode,
-        }) - 1;
+  let maskedSource = '';
 
-      return '\uE000ediput-math-' + index + '\uE001';
-    },
-  );
+  for (let cursor = 0; cursor < source.length; cursor += 1) {
+    const character = source[cursor];
+
+    if (character === '\\' && !isEscaped(source, cursor)) {
+      const closeDelimiter = source[cursor + 1] === '['
+        ? '\\]'
+        : source[cursor + 1] === '('
+          ? '\\)'
+          : null;
+
+      if (closeDelimiter) {
+        const closeIndex = source.indexOf(closeDelimiter, cursor + 2);
+
+        if (closeIndex !== -1) {
+          const end = closeIndex + closeDelimiter.length;
+          maskedSource += addMathExpression(
+            expressions,
+            source.slice(cursor, end),
+            source.slice(cursor + 2, closeIndex),
+            closeDelimiter === '\\]',
+          );
+          cursor = end - 1;
+          continue;
+        }
+      }
+    }
+
+    if (character === '$' && !isEscaped(source, cursor)) {
+      const displayMode = source[cursor + 1] === '$';
+      const delimiterLength = displayMode ? 2 : 1;
+      let closeIndex = -1;
+
+      for (let searchFrom = cursor + delimiterLength; searchFrom < source.length; searchFrom += 1) {
+        if (source[searchFrom] !== '$' || isEscaped(source, searchFrom)) continue;
+        if (!displayMode && (source[searchFrom + 1] === '$' || source[searchFrom - 1] === '$')) continue;
+        if (displayMode && source.slice(searchFrom, searchFrom + 2) !== '$$') continue;
+        closeIndex = searchFrom;
+        break;
+      }
+
+      if (closeIndex !== -1) {
+        const expression = source.slice(cursor + delimiterLength, closeIndex);
+        const hasInlineLineBreak = !displayMode && /[\r\n]/.test(expression);
+
+        if (expression.trim() && !hasInlineLineBreak) {
+          const end = closeIndex + delimiterLength;
+          maskedSource += addMathExpression(
+            expressions,
+            source.slice(cursor, end),
+            expression,
+            displayMode,
+          );
+          cursor = end - 1;
+          continue;
+        }
+      }
+    }
+
+    maskedSource += character;
+  }
 
   return {
     source: maskedSource,
@@ -151,11 +214,19 @@ function renderMathInHtml(
           try {
             wrapper.innerHTML = katex.renderToString(item.expression, {
               displayMode: item.displayMode,
-              throwOnError: false,
-              strict: 'ignore',
+              throwOnError: true,
+              strict: 'error',
             });
-          } catch {
-            wrapper.textContent = item.source;
+          } catch (error) {
+            wrapper.classList.add('math-error');
+            const source = document.createElement('code');
+            source.textContent = item.source;
+            const message = document.createElement('span');
+            message.className = 'math-error-message';
+            message.textContent = error instanceof Error
+              ? error.message
+              : '数式を解析できません。';
+            wrapper.replaceChildren(source, message);
           }
 
           fragment.appendChild(wrapper);
@@ -242,6 +313,9 @@ export function makeDocumentHtml(content: string): string {
     '.math-inline{white-space:nowrap}' +
     '.math-display{display:block;margin:1em 0;text-align:center}' +
     '.katex{font-size:1.05em}' +
+    '.math-error{color:#9e2c2c}' +
+    '.math-error code{color:inherit;background:#fff0f0;border:1px solid #e6aaaa}' +
+    '.math-error-message{display:block;margin-top:.35em;font-size:.8em;line-height:1.45}' +
     '@media print{' +
       '@page{size:A4;margin:18mm}' +
       'body{max-width:none;margin:0;padding:0}' +

@@ -353,6 +353,23 @@ button {
   font-size: 1.05em;
 }
 
+.math-error {
+  color: #9e2c2c;
+}
+
+.math-error code {
+  color: inherit;
+  background: #fff0f0;
+  border: 1px solid #e6aaaa;
+}
+
+.math-error-message {
+  display: block;
+  margin-top: 0.35em;
+  font-size: 0.8em;
+  line-height: 1.45;
+}
+
 .markdown-body blockquote {
   border-left: 3px solid #8fb9ba;
   margin: 1.4em 0;
@@ -736,6 +753,10 @@ button {
 
   .print-only .math-inline {
     white-space: nowrap;
+  }
+
+  .print-only .math-error code {
+    background: #fff0f0 !important;
   }
 
   a {
