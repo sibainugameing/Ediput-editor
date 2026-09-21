@@ -229,6 +229,7 @@ export function makeDocumentHtml(content: string): string {
     '<head>' +
     '<meta charset="utf-8">' +
     '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+    '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css">' +
     '<title>Ediput document</title>' +
     '<style>' +
     'body{font:16px/1.75 system-ui,-apple-system,sans-serif;max-width:800px;margin:48px auto;padding:0 24px;color:#20242b}' +
