@@ -1,11 +1,21 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+} from 'react';
 import { AppHeader, type ViewMode } from './components/AppHeader';
 import { EditorPane } from './components/EditorPane';
 import { PreviewPane } from './components/PreviewPane';
 import { StatusBar } from './components/StatusBar';
 import {
+  DEFAULT_DOCUMENT_NAME,
+  DOCUMENT_NAME_STORAGE_KEY,
   downloadText,
+  htmlFilenameFromMarkdown,
   makeDocumentHtml,
+  markdownFilenameFromImport,
   renderMarkdown,
   sanitizeHtml,
   STARTER_MARKDOWN,
@@ -21,6 +31,9 @@ export default function App() {
   const [source, setSource] = useState(() =>
     loadStoredDocument(STORAGE_KEY, STARTER_MARKDOWN),
   );
+  const [documentName, setDocumentName] = useState(() =>
+    loadStoredDocument(DOCUMENT_NAME_STORAGE_KEY, DEFAULT_DOCUMENT_NAME),
+  );
   const [view, setView] = useState<ViewMode>(() =>
     window.matchMedia(MOBILE_BREAKPOINT).matches ? 'edit' : 'split',
   );
@@ -34,11 +47,35 @@ export default function App() {
   const saved = useAutosave(source, STORAGE_KEY);
 
   useEffect(() => {
+    try {
+      localStorage.setItem(DOCUMENT_NAME_STORAGE_KEY, documentName);
+    } catch {
+      // Filename persistence is best-effort, just like document autosave.
+    }
+
+    document.title = documentName.replace(/\\.(?:md|markdown|txt)$/i, '') || 'Ediput';
+
+    return () => {
+      document.title = 'Ediput';
+    };
+  }, [documentName]);
+
+  useEffect(() => {
     const viewport = window.visualViewport;
     if (!viewport) return;
 
-    const updateKeyboardState = (): void => {
-      const keyboardHeight = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
+    const updateViewportState = (): void => {
+      const viewportHeight = Math.max(1, viewport.height);
+      document.documentElement.style.setProperty(
+        '--visual-viewport-height',
+        `${viewportHeight}px`,
+      );
+
+      const keyboardHeight = Math.max(
+        0,
+        window.innerHeight - viewport.height - viewport.offsetTop,
+      );
+
       const keyboardOpen =
         view === 'edit' &&
         window.matchMedia(MOBILE_BREAKPOINT).matches &&
@@ -47,14 +84,15 @@ export default function App() {
       document.documentElement.classList.toggle('keyboard-open', keyboardOpen);
     };
 
-    updateKeyboardState();
-    viewport.addEventListener('resize', updateKeyboardState);
-    viewport.addEventListener('scroll', updateKeyboardState);
+    updateViewportState();
+    viewport.addEventListener('resize', updateViewportState);
+    viewport.addEventListener('scroll', updateViewportState);
 
     return () => {
-      viewport.removeEventListener('resize', updateKeyboardState);
-      viewport.removeEventListener('scroll', updateKeyboardState);
+      viewport.removeEventListener('resize', updateViewportState);
+      viewport.removeEventListener('scroll', updateViewportState);
       document.documentElement.classList.remove('keyboard-open');
+      document.documentElement.style.removeProperty('--visual-viewport-height');
     };
   }, [view]);
 
@@ -67,7 +105,7 @@ export default function App() {
 
   function exportHtml(): void {
     downloadText(
-      'ediput-document.html',
+      htmlFilenameFromMarkdown(documentName),
       makeDocumentHtml(safeHtml),
       'text/html;charset=utf-8',
     );
@@ -75,23 +113,30 @@ export default function App() {
 
   function exportMarkdown(): void {
     downloadText(
-      'ediput-document.md',
+      documentName || DEFAULT_DOCUMENT_NAME,
       source,
       'text/markdown;charset=utf-8',
     );
   }
 
-  async function importMarkdown(event: ChangeEvent<HTMLInputElement>): Promise<void> {
+  async function importMarkdown(
+    event: ChangeEvent<HTMLInputElement>,
+  ): Promise<void> {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!window.confirm(`「${file.name}」を読み込みます。現在の文章を置き換えますか？`)) {
+    if (
+      !window.confirm(
+        `「${file.name}」を読み込みます。現在の文章を置き換えますか？`,
+      )
+    ) {
       event.target.value = '';
       return;
     }
 
     try {
       setSource(await file.text());
+      setDocumentName(markdownFilenameFromImport(file.name));
     } catch {
       window.alert('ファイルを読み込めませんでした。');
     } finally {
@@ -110,6 +155,7 @@ export default function App() {
       <AppHeader
         view={view}
         onViewChange={setView}
+        documentName={documentName}
         fileInputRef={fileInputRef}
         onImport={importMarkdown}
         onExportMarkdown={exportMarkdown}
