@@ -30,8 +30,8 @@ button {
 }
 
 .app-shell {
-  height: 100vh;
-  height: 100dvh;
+  height: var(--visual-viewport-height, 100dvh);
+  min-height: 0;
   display: flex;
   flex-direction: column;
   background: #17191d;
@@ -62,11 +62,16 @@ button {
 
 .brand {
   gap: 10px;
+  min-width: 0;
   color: #f1f3f5;
   text-decoration: none;
   font-size: 17px;
   font-weight: 700;
   letter-spacing: -0.4px;
+}
+
+.brand-label {
+  flex-shrink: 0;
 }
 
 .brand-mark {
@@ -77,9 +82,11 @@ button {
   border-radius: 8px;
   background: #303740;
   color: #a6d9dc;
+  flex-shrink: 0;
 }
 
 .version {
+  flex-shrink: 0;
   font: 11px 'DM Mono', monospace;
   color: #8c949f;
   background: #292d34;
@@ -89,8 +96,21 @@ button {
   margin-left: 2px;
 }
 
+.document-name {
+  min-width: 0;
+  max-width: min(34vw, 320px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #7f8894;
+  font: 11px 'DM Mono', monospace;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
 .top-actions {
   gap: 12px;
+  min-width: 0;
 }
 
 .view-switch {
@@ -416,6 +436,7 @@ button {
 
   .brand {
     grid-area: brand;
+    gap: 8px;
     font-size: 15px;
     min-width: 0;
   }
@@ -427,6 +448,11 @@ button {
   .brand-mark {
     width: 32px;
     height: 32px;
+  }
+
+  .document-name {
+    max-width: 42vw;
+    font-size: 10px;
   }
 
   .top-actions {
@@ -591,6 +617,10 @@ button {
   .keyboard-open .brand-mark {
     width: 30px;
     height: 30px;
+  }
+
+  .keyboard-open .document-name {
+    max-width: 48vw;
   }
 
   .keyboard-open .view-switch {
