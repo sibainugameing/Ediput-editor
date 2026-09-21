@@ -562,7 +562,7 @@ button {
     display: none;
   }
 
-  .mode-split .workspace {
+  .workspace.mode-split {
     flex-direction: column;
   }
 
