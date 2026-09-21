@@ -16,6 +16,13 @@ Ediput is designed to run as a static web app, with GitHub Pages as the initial 
 - Print dialog workflow for saving the preview as PDF
 - Reset to the starter document (confirmation required)
 - Responsive graphite interface with restrained cyan/teal accents
+- Mobile-first editing layout with larger touch targets and 16px editor text
+- Mobile file menu with explicit Open / Save Markdown / Save HTML / PDF actions
+- Mobile edit mode is the default on narrow screens
+- Keyboard-aware mobile header that collapses while the editor is active
+- Mobile split view stacks editor and preview vertically instead of hiding the editor
+- Touch-friendly scrolling with bounded CodeMirror and preview scroll regions
+- Mobile preview tables can scroll horizontally without expanding the page
 - DOMPurify sanitization of rendered Markdown before HTML injection/export
 - Bidirectional proportional scroll synchronization between the editor and preview in split view
 
@@ -59,7 +66,6 @@ The CSS remains centralized in `src/styles.css` because the current UI uses one 
 - DOCX export
 - Markdown features including math, syntax highlighting, and diagrams
 - Multiple named documents
-- Mobile-friendly editing and preview refinements
 
 Planned items are not implemented unless explicitly listed under Current prototype.
 
